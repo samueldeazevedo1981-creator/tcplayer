@@ -1,0 +1,1 @@
+Versao com TOM HQ interno: pitch -3 a +2 em passos de 0,5 tom (1 semitom). O processamento do TOM e feito dentro do app, sem exportar arquivo. Teste 0 TOM primeiro; depois -0,5, -1, -2, -3. Apague o PWA antigo antes de instalar para nao pegar cache velho.

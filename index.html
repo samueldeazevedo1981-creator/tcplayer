@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>TRUCKER CAP PLAYER - Palco Pro</title>
+  <meta name="theme-color" content="#b91c1c" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <style>
+    :root{--red:#b91c1c;--dark:#050507;--panel:#09090b;--line:#27272a}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{margin:0;background:#000;color:#fff;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-x:hidden}
+    ::-webkit-scrollbar{width:7px;height:7px}::-webkit-scrollbar-track{background:#000}::-webkit-scrollbar-thumb{background:var(--red);border-radius:99px}
+    .stage-panel{background:linear-gradient(180deg,#0b0b0e,#050507);border:1px solid #27272a;box-shadow:0 30px 80px rgba(0,0,0,.65)}
+    .red-glow{box-shadow:0 0 35px rgba(185,28,28,.45)}
+    .btn{border:0;border-radius:18px;padding:15px 22px;font-weight:1000;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;transition:.15s;user-select:none}
+    .btn:active{transform:scale(.96)}.btn-red{background:var(--red);color:white}.btn-dark{background:#18181b;color:white;border:1px solid #3f3f46}.btn-ghost{background:#09090b;color:#a1a1aa;border:1px solid #27272a}.btn-red:hover{background:#991b1b}.btn-dark:hover,.btn-ghost:hover{border-color:#b91c1c;color:#fff}
+    input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:11px;border-radius:999px;background:#27272a;outline:none}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:30px;height:30px;border-radius:50%;background:var(--red);border:4px solid #fff;box-shadow:0 0 18px rgba(185,28,28,.7)}
+    .lyrics{font-family:"Courier New",monospace;white-space:pre;word-break:normal;overflow-x:auto;line-height:1.45}.chord{color:#facc15;font-weight:1000}.lyric{color:#fff}
+    .track{display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;border:1px solid #27272a;background:#09090b;cursor:pointer}.track.active{background:#b91c1c;border-color:#fca5a5;color:#fff}.track.dragging{opacity:.45;border:2px dashed #fff}.small{font-size:11px;color:#a1a1aa;font-weight:900;text-transform:uppercase;letter-spacing:.16em}
+    @keyframes pulse{0%,100%{opacity:.4;transform:scaleY(.45)}50%{opacity:1;transform:scaleY(1)}}.vu{animation:pulse 1s infinite;transform-origin:bottom}.safe-bottom{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+    @media(max-width:768px){.btn{padding:13px 16px;font-size:12px}.lyrics{font-size:22px}.hide-mobile{display:none}.playbtn{width:110px!important;height:110px!important}.container-pad{padding:14px!important}.title{font-size:34px!important}.stage-height{height:420px!important}}
+
+    /* v1.3 PALCO OTIMIZADO: letra maior + autoplay no player */
+    .lyrics-toolbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+    .lyrics-stage{height:clamp(620px,68vh,820px)!important;min-height:620px}
+    .lyrics-stage .lyrics{min-height:0;font-size:var(--lyrics-font-size, clamp(28px,3.2vw,42px));line-height:1.36;padding:22px 28px!important}
+    .scroll-pill{display:flex;align-items:center;gap:8px;background:#09090b;border:1px solid #27272a;border-radius:16px;padding:8px 12px}
+    .player-autoplay-row{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+    .player-autoplay-row #autoPlayBtn{font-size:12px;padding:13px 18px;border-radius:16px}
+
+
+    .font-size-pill{display:flex;align-items:center;gap:8px;background:#09090b;border:1px solid #27272a;border-radius:16px;padding:8px 12px}
+    .font-size-pill input{width:105px!important;height:8px!important}
+    @media(max-width:768px){.font-size-pill{padding:6px 8px;gap:6px}.font-size-pill input{width:86px!important;height:7px!important}}
+
+    /* v1.2 MOBILE PERFORMANCE + REAL TABS */
+    .tab-nav{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:-8px 0 18px;position:sticky;top:0;z-index:50;background:rgba(0,0,0,.92);backdrop-filter:blur(8px);padding:10px;border-bottom:1px solid #18181b}
+    .tab-btn{border:1px solid #27272a;background:#09090b;color:#a1a1aa;border-radius:16px;padding:14px 12px;font-weight:1000;letter-spacing:.14em;text-transform:uppercase}
+    .tab-btn.active{background:var(--red);color:#fff;border-color:#fca5a5;box-shadow:0 0 22px rgba(185,28,28,.35)}
+    .tab-page{display:none}.tab-page.active{display:block}
+    .setlist-shell{max-width:980px;margin:0 auto}.palco-shell{max-width:1200px;margin:0 auto}
+    @media(max-width:768px){
+      body{background:#000}.stage-panel{box-shadow:0 14px 34px rgba(0,0,0,.55)}.red-glow{box-shadow:0 0 18px rgba(185,28,28,.30)}
+      .tab-nav{margin-left:-14px;margin-right:-14px;top:0}.tab-btn{font-size:12px;padding:13px 8px}
+      header.stage-panel{margin-bottom:12px}.stage-height{height:calc(100vh - 230px)!important;min-height:520px}.lyrics-stage{height:calc(100vh - 230px)!important;min-height:520px}.lyrics{font-size:var(--lyrics-font-size, 24px)!important;line-height:1.34!important;padding:16px!important}
+      .lyrics-toolbar{gap:6px}.lyrics-toolbar .btn{font-size:10px;padding:10px 11px;border-radius:13px}.scroll-pill{padding:6px 8px;gap:6px}.scroll-pill input{width:92px!important;height:7px!important}
+      #vu{display:none!important}.vu{animation:none!important}.title{line-height:.95}.safe-bottom{padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+      #songTitle{font-size:26px!important;white-space:normal}.playbtn{width:104px!important;height:104px!important;font-size:38px!important}
+      #time{font-size:21px!important;padding:12px 14px!important}.btn{border-radius:15px}.track{padding:13px}.hide-on-stage-mobile{display:none!important}
+    }
+    @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+    /* AJUSTE MOBILE CORRIGIDO:
+       No celular: LETRA -> PLAYER -> BARRA -> NOME/TEMPO.
+       Corrige o bug do space-y do Tailwind quando usamos order. */
+    @media(max-width:768px){
+      .palco-player-panel{
+        display:flex!important;
+        flex-direction:column!important;
+        gap:18px!important;
+      }
+      .palco-player-panel > *{
+        margin-top:0!important;
+        margin-bottom:0!important;
+      }
+      .palco-controls-grid{order:1!important;}
+      .palco-seek{order:2!important;}
+      .palco-song-info{order:3!important;}
+      .palco-song-info{
+        padding:14px!important;
+      }
+      .palco-song-info #songTitle{
+        font-size:22px!important;
+        line-height:1.05!important;
+      }
+      .palco-song-info #time{
+        font-size:18px!important;
+        padding:10px 12px!important;
+      }
+    }
+  
+    .pitch-btn{border:1px solid #3f3f46;background:#09090b;color:#fff;border-radius:16px;padding:16px 10px;font-weight:1000;letter-spacing:.08em;text-transform:uppercase}
+    .pitch-btn.active{background:var(--red);border-color:#fca5a5;box-shadow:0 0 18px rgba(185,28,28,.45)}
+
+    /* OFFLINE FALLBACK - substitui classes essenciais do Tailwind sem CDN */
+    .hidden{display:none!important}.flex{display:flex}.grid{display:grid}.block{display:block}.inline-block{display:inline-block}
+    .flex-col{flex-direction:column}.flex-row{flex-direction:row}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.items-start{align-items:flex-start}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.text-center{text-align:center}.text-right{text-align:right}.relative{position:relative}.absolute{position:absolute}.sticky{position:sticky}.overflow-hidden{overflow:hidden}.overflow-y-auto{overflow-y:auto}.overflow-x-auto{overflow-x:auto}
+    .mx-auto{margin-left:auto;margin-right:auto}.mt-2{margin-top:.5rem}.mt-3{margin-top:.75rem}.mt-4{margin-top:1rem}.mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}.mb-4{margin-bottom:1rem}.mb-6{margin-bottom:1.5rem}.p-2{padding:.5rem}.p-3{padding:.75rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.px-3{padding-left:.75rem;padding-right:.75rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.pb-3{padding-bottom:.75rem}
+    .gap-2{gap:.5rem}.gap-3{gap:.75rem}.gap-4{gap:1rem}.gap-5{gap:1.25rem}.gap-6{gap:1.5rem}.space-y-3>*+*{margin-top:.75rem}.space-y-4>*+*{margin-top:1rem}.space-y-6>*+*{margin-top:1.5rem}
+    .w-full{width:100%}.h-full{height:100%}.w-20{width:5rem}.h-20{height:5rem}.min-h\[520px\],.min-h-\[520px\]{min-height:520px}.max-w\[1600px\],.max-w-\[1600px\]{max-width:1600px}
+    .rounded-2xl{border-radius:1rem}.rounded-3xl{border-radius:1.5rem}.rounded\[28px\],.rounded-\[28px\]{border-radius:28px}.rounded-full{border-radius:9999px}
+    .border{border:1px solid #27272a}.border-2{border:2px solid #27272a}.border-b{border-bottom:1px solid #27272a}.border-zinc-800{border-color:#27272a}.border-red-700{border-color:#b91c1c}.bg-black{background:#000}.bg-red-700{background:#b91c1c}.bg-zinc-950{background:#09090b}.bg-zinc-900{background:#18181b}.text-white{color:#fff}.text-red-500,.text-red-600{color:#ef4444}.text-red-400{color:#f87171}.text-zinc-400{color:#a1a1aa}.text-zinc-500{color:#71717a}.font-black{font-weight:1000}.font-bold{font-weight:700}.italic{font-style:italic}.uppercase{text-transform:uppercase}.tracking-tighter{letter-spacing:-.05em}
+    .text-xs{font-size:.75rem}.text-sm{font-size:.875rem}.text-base{font-size:1rem}.text-lg{font-size:1.125rem}.text-xl{font-size:1.25rem}.text-2xl{font-size:1.5rem}.text-3xl{font-size:1.875rem}.text-4xl{font-size:2.25rem}.text-6xl{font-size:3.75rem}
+    .grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.col-span-2{grid-column:span 2/span 2}
+    .top-0{top:0}.left-0{left:0}.right-0{right:0}.h-1{height:.25rem}.z-50{z-index:50}
+    @media(min-width:768px){.md\:p-7{padding:1.75rem}.md\:p-8{padding:2rem}.md\:text-base{font-size:1rem}.md\:text-3xl{font-size:1.875rem}.md\:text-6xl{font-size:3.75rem}.md\:grid-cols-6{grid-template-columns:repeat(6,minmax(0,1fr))}}
+    @media(min-width:1024px){.lg\:flex-row{flex-direction:row}.lg\:text-left{text-align:left}.lg\:text-right{text-align:right}}
+
+</style>
+</head>
+<body>
+  <div id="app" class="max-w-[1600px] mx-auto p-4 md:p-8 safe-bottom container-pad">
+    <header class="stage-panel rounded-[28px] p-5 md:p-7 mb-6 relative overflow-hidden">
+      <div class="absolute top-0 left-0 right-0 h-1 bg-red-700 red-glow"></div>
+      <div class="flex flex-col lg:flex-row gap-5 items-center justify-between">
+        <div class="flex items-center gap-5 text-center lg:text-left">
+          <img src="icon-192.png" class="w-20 h-20 rounded-3xl border-2 border-red-700 red-glow" alt="TCB" />
+          <div>
+            <h1 class="title text-4xl md:text-6xl font-black italic tracking-tighter">TRUCKER CAP PLAYER</h1>
+            <p class="text-red-600 font-black tracking-[.26em] text-xs md:text-base uppercase">O app do músico ao vivo</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap justify-center gap-3">
+          <label class="btn btn-red red-glow">CARREGAR ÁUDIO<input id="audioInput" type="file" accept="audio/*" multiple hidden></label>
+          <button id="installBtn" class="btn btn-dark hidden">INSTALAR APP</button>
+        </div>
+      </div>
+      <p id="status" class="mt-4 text-center lg:text-right small">Pronto para palco • Áudios e letras ficam salvos neste aparelho</p>
+    </header>
+
+    <nav class="tab-nav" aria-label="Abas do aplicativo">
+      <button id="tabPalcoBtn" class="tab-btn active" type="button">PALCO</button>
+      <button id="tabSetlistBtn" class="tab-btn" type="button">SETLIST</button>
+      <button id="tabTomBtn" class="tab-btn" type="button">TOM</button>
+    </nav>
+
+    <main class="space-y-6">
+      <section id="tabSetlist" class="tab-page setlist-shell stage-panel rounded-[28px] p-4 min-h-[520px] flex-col">
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-zinc-800">
+          <h2 class="small text-red-500">Setlist / Configuração</h2><span id="count" class="small">0</span>
+        </div>
+        <div class="mb-4">
+          <label class="btn btn-red red-glow w-full text-center block">CARREGAR ÁUDIO<input id="audioInputSetlist" type="file" accept="audio/*" multiple hidden></label>
+        </div>
+        <div id="trackList" class="flex-1 overflow-y-auto space-y-3"></div>
+        <div class="pt-4 mt-4 border-t border-zinc-800 flex gap-2">
+          <button id="clearBtn" class="btn btn-ghost w-full">LIMPAR TUDO</button>
+        </div>
+      </section>
+
+      <section id="tabPalco" class="tab-page active palco-shell space-y-6">
+        <div class="stage-panel rounded-[32px] overflow-hidden border-4 border-red-800 stage-height lyrics-stage flex flex-col">
+          <div class="bg-black p-4 md:p-5 border-b border-red-900/50 flex flex-col md:flex-row gap-3 justify-between items-center">
+            <div class="font-black uppercase tracking-[.22em] text-sm md:text-base">MONITOR DE LETRA / CIFRA</div>
+            <div class="lyrics-toolbar">
+              <label class="btn btn-dark text-xs">UPLOAD .TXT<input id="txtInput" type="file" accept=".txt,text/plain" hidden></label>
+              <label class="btn btn-dark text-xs">UPLOAD PDF<input id="pdfInput" type="file" accept="application/pdf,.pdf" hidden></label>
+              <button id="scrollUpBtn" class="btn btn-ghost text-xs">◀ LETRA</button>
+              <button id="scrollDownBtn" class="btn btn-ghost text-xs">LETRA ▶</button>
+              <button id="scrollTopBtn" class="btn btn-ghost text-xs">SYNC 0</button>
+              <div class="scroll-pill">
+                <span class="small !text-[9px]">VEL</span>
+                <input id="scrollSpeed" type="range" min="0.25" max="1.80" step="0.05" value="1" style="width:115px;height:8px" />
+                <span id="scrollSpeedValue" class="small !text-[9px] w-10">1.00x</span>
+              </div>
+              <div class="font-size-pill">
+                <span class="small !text-[9px]">FONTE</span>
+                <input id="fontSizeControl" type="range" min="18" max="38" step="1" value="24" />
+                <span id="fontSizeValue" class="small !text-[9px] w-10">24px</span>
+              </div>
+              <button id="autoScrollBtn" class="btn btn-ghost text-xs">AUTO SCROLL ON</button>
+            </div>
+          </div>
+          <div id="lyricsBox" class="lyrics flex-1 overflow-y-auto p-6 md:p-10 text-2xl md:text-4xl bg-black/70 italic font-bold">Carregue um áudio e depois vincule uma letra ou cifra .TXT.</div>
+        </div>
+
+        <div class="stage-panel rounded-[36px] p-5 md:p-8 space-y-7 palco-player-panel">
+          <div class="bg-black rounded-[24px] p-5 border border-zinc-800 flex flex-col md:flex-row gap-4 items-center justify-between palco-song-info">
+            <div class="min-w-0 text-center md:text-left">
+              <div id="songTitle" class="text-3xl md:text-5xl font-black italic text-red-600 truncate">SEM ÁUDIO</div>
+              <div class="player-autoplay-row justify-center md:justify-start">
+                <button id="autoPlayBtn" class="btn btn-red text-xs">AUTO PLAY ÁUDIO ON</button>
+              </div>
+            </div>
+            <div class="flex items-center gap-3">
+              <div id="vu" class="hidden h-10 items-end gap-1"></div>
+              <div id="time" class="font-mono text-2xl md:text-4xl font-black text-red-600 bg-zinc-950 rounded-2xl px-5 py-3 border border-zinc-800">0:00 | 0:00</div>
+            </div>
+          </div>
+
+          <input id="seek" class="palco-seek" type="range" min="0" max="100" step="0.01" value="0" />
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 palco-controls-grid">
+            <div class="bg-black rounded-[28px] p-5 border border-zinc-800 flex flex-col justify-center items-center gap-6">
+              <div class="flex items-center gap-4">
+                <button id="prevBtn" class="btn btn-ghost text-2xl">⏮</button>
+                <button id="playBtn" class="playbtn btn btn-red red-glow rounded-full text-5xl flex items-center justify-center" style="width:150px;height:150px">▶</button>
+                <button id="nextBtn" class="btn btn-ghost text-2xl">⏭</button>
+              </div>
+              <div id="engine" class="small text-red-500">ENGINE PRONTO</div>
+            </div>
+
+            <div class="bg-black rounded-[28px] p-5 border border-zinc-800 space-y-6">
+              <span class="small text-red-500">MASTER GAIN</span>
+              <div class="flex items-center gap-4"><span class="text-3xl">🔊</span><input id="volume" type="range" min="0" max="1.2" step="0.01" value="0.8" /></div>
+              <div id="volumeValue" class="text-center text-4xl font-black text-red-600">80%</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tabTom" class="tab-page">
+        <div class="glass p-4 md:p-6 rounded-[2rem] mb-6">
+          <h2 class="font-black text-2xl md:text-3xl text-white mb-2">TOM / PITCH</h2>
+          <p class="text-zinc-400 text-sm mb-4">Mesmo motor em tempo real do Trucker Cap Tune V8 aplicado ao Player. Sem demo e sem reescrever o pitch.</p>
+          <div class="bg-black/70 border border-red-900 rounded-[24px] p-5 space-y-5">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <div class="small text-red-500">ALTERAR TOM DA MÚSICA ATUAL</div>
+                <div id="pitchCurrent" class="text-4xl font-black text-white mt-2">0 TOM</div>
+                <div class="text-xs text-zinc-500 mt-1">Escala correta: 0,5 tom = 1 semitom</div>
+              </div>
+              <button id="pitchResetBtn" class="btn btn-ghost">VOLTAR AO ORIGINAL</button>
+            </div>
+            <div id="pitchGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3"></div>
+            <div class="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-300">
+              <b class="text-red-400">Importante:</b> em 0 TOM o Player usa o motor original da V26. Ao escolher outro tom, entra o motor interno do Tune V08 no áudio atual.
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+<script>
+(() => {
+  const DB_NAME = 'TRUCKER_CAP_PLAYER_STAGE_DB_V12';
+  const STORE = 'tracks';
+  const $ = (id) => document.getElementById(id);
+  const el = {
+    audioInput:$('audioInput'), audioInputSetlist:$('audioInputSetlist'), txtInput:$('txtInput'), pdfInput:$('pdfInput'), trackList:$('trackList'), count:$('count'), status:$('status'),
+    lyricsBox:$('lyricsBox'), songTitle:$('songTitle'), time:$('time'), seek:$('seek'), playBtn:$('playBtn'), prevBtn:$('prevBtn'), nextBtn:$('nextBtn'),
+    volume:$('volume'), volumeValue:$('volumeValue'), clearBtn:$('clearBtn'),
+    autoScrollBtn:$('autoScrollBtn'), autoPlayBtn:$('autoPlayBtn'), scrollUpBtn:$('scrollUpBtn'), scrollDownBtn:$('scrollDownBtn'), scrollTopBtn:$('scrollTopBtn'), scrollSpeed:$('scrollSpeed'), scrollSpeedValue:$('scrollSpeedValue'), fontSizeControl:$('fontSizeControl'), fontSizeValue:$('fontSizeValue'), vu:$('vu'), engine:$('engine'), installBtn:$('installBtn'), pitchGrid:$('pitchGrid'), pitchCurrent:$('pitchCurrent'), pitchResetBtn:$('pitchResetBtn')
+  };
+
+  let db, tracks = [], currentIndex = 0, player = null, timer = null, progress = 0, duration = 0, isPlaying = false, autoScroll = true, autoPlay = (localStorage.getItem('tcb_auto_play') !== 'false'), deferredInstall = null, dragId = null, objectUrl = null;
+  let pitchTom = Number(localStorage.getItem('tcb_pitch_tom') || 0);
+  let audioCtx=null, sourceNode=null, pitchNode=null, gainNode=null, pitchWorkletReady=false, decodedTrackId=null, decodedBuffer=null, webAudioStartedAt=0, webAudioOffset=0;
+  let scrollBias = 0, scrollSpeed = Number(localStorage.getItem('tcb_scroll_speed') || 1), fontSize = Number(localStorage.getItem('tcb_font_size') || 24), programmaticScroll = false;
+
+  function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'});};req.onsuccess=e=>resolve(e.target.result);req.onerror=()=>reject(req.error);});}
+  function tx(mode='readonly'){return db.transaction(STORE,mode).objectStore(STORE)}
+  function getAll(){return new Promise(res=>{const r=tx().getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([]);});}
+  function putTrack(t){return new Promise((res,rej)=>{const r=tx('readwrite').put(t);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
+  function deleteTrack(id){return new Promise(res=>{const r=tx('readwrite').delete(id);r.onsuccess=()=>res();r.onerror=()=>res();});}
+  function clearAll(){return new Promise(res=>{const r=tx('readwrite').clear();r.onsuccess=()=>res();r.onerror=()=>res();});}
+  const fmt=s=>{s=Math.max(0,Number(s)||0);return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0')};
+  const current=()=>tracks[currentIndex]||null;
+  const setStatus=(m)=>{el.status.textContent=m};
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  function maxScroll(){return Math.max(0, el.lyricsBox.scrollHeight - el.lyricsBox.clientHeight)}
+  function baseScrollTop(){return duration ? (progress / duration) * maxScroll() * scrollSpeed : 0}
+  function applyAutoScroll(){
+    if(!autoScroll || !duration) return;
+    const top = clamp(baseScrollTop() + scrollBias, 0, maxScroll());
+    programmaticScroll = true;
+    el.lyricsBox.scrollTo({top, behavior:'smooth'});
+    setTimeout(()=>{programmaticScroll=false}, 180);
+  }
+  function updateAutoPlayUI(){
+    el.autoPlayBtn.textContent = autoPlay ? 'AUTO PLAY ÁUDIO: LIGADO' : 'AUTO PLAY ÁUDIO: DESLIGADO';
+    el.autoPlayBtn.className = autoPlay ? 'btn btn-red text-xs' : 'btn btn-ghost text-xs';
+  }
+  function updateAutoScrollUI(){
+    el.autoScrollBtn.textContent = autoScroll ? 'AUTO SCROLL ON' : 'AUTO SCROLL OFF';
+    el.autoScrollBtn.className = autoScroll ? 'btn btn-red text-xs' : 'btn btn-ghost text-xs';
+  }
+  function updateScrollSpeedUI(){
+    scrollSpeed = clamp(Number(scrollSpeed) || 1, .25, 1.8);
+    el.scrollSpeed.value = scrollSpeed;
+    el.scrollSpeedValue.textContent = scrollSpeed.toFixed(2)+'x';
+  }
+  function updateFontSizeUI(){
+    fontSize = clamp(Number(fontSize) || 24, 18, 38);
+    if(el.fontSizeControl) el.fontSizeControl.value = fontSize;
+    if(el.fontSizeValue) el.fontSizeValue.textContent = fontSize + 'px';
+    if(el.lyricsBox) el.lyricsBox.style.setProperty('--lyrics-font-size', fontSize + 'px');
+  }
+
+
+  // === TRUCKER CAP TUNE V08 - FUNÇÃO INTERNA, SEM EXPORTAR ===
+  const pitchStepsTom = [-3,-2.5,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2];
+  const tuneWorkletCode = `
+    class PitchShifterProcessor extends AudioWorkletProcessor {
+      static get parameterDescriptors(){ return [{name:'pitchRatio', defaultValue:1.0, minValue:0.5, maxValue:2.0}]; }
+      constructor(){
+        super();
+        this.size=131072; this.bufferL=new Float32Array(this.size); this.bufferR=new Float32Array(this.size);
+        this.writePtr=0; this.phase=0; this.windowSize=3072; this.hannTable=new Float32Array(this.windowSize);
+        for(let i=0;i<this.windowSize;i++) this.hannTable[i]=Math.sin((i/this.windowSize)*Math.PI);
+      }
+      process(inputs,outputs,parameters){
+        const input=inputs[0], output=outputs[0]; if(!input || input.length===0) return true;
+        const inputL=input[0], inputR=input[1]||input[0], outputL=output[0], outputR=output[1]||output[0];
+        const ratio=(parameters.pitchRatio && parameters.pitchRatio.length ? parameters.pitchRatio[0] : 1.0) || 1.0;
+        const len=inputL.length;
+        if(Math.abs(ratio-1.0)<0.005){ outputL.set(inputL); outputR.set(inputR); return true; }
+        const speed=1.0-ratio;
+        for(let i=0;i<len;i++){
+          this.bufferL[this.writePtr]=inputL[i]; this.bufferR[this.writePtr]=inputR[i];
+          let outL=0, outR=0;
+          for(let k=0;k<4;k++){
+            let delay=(this.phase + k*(this.windowSize/4)) % this.windowSize; if(delay<0) delay+=this.windowSize;
+            let readPtr=(this.writePtr-delay) % this.size; if(readPtr<0) readPtr+=this.size;
+            const idx=Math.floor(delay)%this.windowSize; const w=this.hannTable[idx]*this.hannTable[idx];
+            const a=Math.floor(readPtr), b=(a===this.size-1?0:a+1), frac=readPtr-a;
+            const sL=this.bufferL[a]*(1-frac)+this.bufferL[b]*frac; const sR=this.bufferR[a]*(1-frac)+this.bufferR[b]*frac;
+            outL+=sL*w; outR+=sR*w;
+          }
+          outputL[i]=outL*0.72; outputR[i]=outR*0.72;
+          this.writePtr=(this.writePtr+1)%this.size; this.phase=(this.phase+speed)%this.windowSize; if(this.phase<0) this.phase+=this.windowSize;
+        }
+        return true;
+      }
+    }
+    registerProcessor('pitch-shifter-processor', PitchShifterProcessor);
+  `;
+  function tomToSemitones(tom){ return Number(tom)*2; } // 0,5 tom = 1 semitom
+  function semitonesToRatio(st){ return Math.pow(2, st/12); }
+  function currentPitchRatio(){ return semitonesToRatio(tomToSemitones(pitchTom)); }
+
+
+  // === PITCH HQ INTERNO (processa dentro do app, sem exportar arquivo) ===
+  let processedPitchCacheKey = null, processedPitchBuffer = null;
+  function invalidatePitchCache(){ processedPitchCacheKey=null; processedPitchBuffer=null; }
+  function makeAudioBufferFromChannels(ctx, channels, sampleRate){
+    const out = ctx.createBuffer(channels.length, channels[0].length, sampleRate);
+    channels.forEach((ch,i)=>out.copyToChannel(ch, i));
+    return out;
+  }
+  function resampleChannelLinear(input, ratio){
+    // ratio > 1 sobe o tom; ratio < 1 desce o tom. Mantém a afinação correta antes do stretch.
+    const outLen = Math.max(1, Math.round(input.length / ratio));
+    const out = new Float32Array(outLen);
+    const max = input.length - 1;
+    for(let i=0;i<outLen;i++){
+      const pos = Math.min(max, i * ratio);
+      const a = pos|0, b = Math.min(max, a+1), f = pos-a;
+      out[i] = input[a]*(1-f) + input[b]*f;
+    }
+    return out;
+  }
+  function makeHann(n){ const w=new Float32Array(n); for(let i=0;i<n;i++) w[i]=0.5-0.5*Math.cos((2*Math.PI*i)/(n-1)); return w; }
+  function bestWsolaOffset(input, output, outPos, targetIn, frame, overlap, search){
+    const start = Math.max(0, targetIn - search);
+    const end = Math.min(input.length - frame - 1, targetIn + search);
+    if(end <= start) return Math.max(0, Math.min(input.length-frame-1, targetIn));
+    let best = targetIn, bestScore = -1e30;
+    // Usa apenas o canal esquerdo como referência de correlação para manter estéreo intacto.
+    const inL=input[0], outL=output[0];
+    for(let cand=start; cand<=end; cand+=8){
+      let cross=0, ina=0, outa=0;
+      for(let j=0;j<overlap;j+=4){
+        const a = outL[outPos+j] || 0;
+        const b = inL[cand+j] || 0;
+        cross += a*b; ina += b*b; outa += a*a;
+      }
+      const score = cross / (Math.sqrt(ina*outa) + 1e-9);
+      if(score > bestScore){ bestScore=score; best=cand; }
+    }
+    return best;
+  }
+  async function wsolaStretchChannels(inputChannels, targetLength, onProgress){
+    const inLen = inputChannels[0].length;
+    const chCount = inputChannels.length;
+    if(Math.abs(targetLength - inLen) < 64) return inputChannels.map(ch=>ch.slice(0));
+    const output = Array.from({length:chCount},()=>new Float32Array(targetLength));
+    const norm = new Float32Array(targetLength);
+    const stretch = targetLength / inLen;
+    const frame = 4096;
+    const synHop = 1024;
+    const overlap = frame - synHop;
+    const anaHop = Math.max(256, Math.round(synHop / stretch));
+    const search = 768;
+    const win = makeHann(frame);
+    let outPos = 0, inPos = 0, frameCount=0;
+    while(outPos < targetLength){
+      const expected = Math.round(outPos / stretch);
+      if(outPos === 0) inPos = 0;
+      else inPos = bestWsolaOffset(inputChannels, output, outPos, Math.max(0, Math.min(inLen-frame-1, expected)), frame, Math.min(overlap, targetLength-outPos), search);
+      const copyLen = Math.min(frame, targetLength-outPos, inLen-inPos);
+      if(copyLen <= 0) break;
+      for(let j=0;j<copyLen;j++){
+        const w = win[j] || 1;
+        const o = outPos + j, ii = inPos + j;
+        for(let c=0;c<chCount;c++) output[c][o] += inputChannels[c][ii] * w;
+        norm[o] += w;
+      }
+      outPos += synHop;
+      inPos += anaHop;
+      frameCount++;
+      if(frameCount % 80 === 0){
+        if(onProgress) onProgress(Math.min(0.98, outPos/targetLength));
+        await new Promise(r=>setTimeout(r,0));
+      }
+    }
+    for(let i=0;i<targetLength;i++){
+      const n = norm[i] || 1;
+      for(let c=0;c<chCount;c++) output[c][i] /= n;
+    }
+    // Normalização suave para reduzir diferença de volume percebida.
+    for(let c=0;c<chCount;c++){
+      let peak=0; for(let i=0;i<targetLength;i++) peak=Math.max(peak, Math.abs(output[c][i]));
+      const g = peak > 0.98 ? 0.98/peak : 1;
+      if(g < 1) for(let i=0;i<targetLength;i++) output[c][i]*=g;
+    }
+    return output;
+  }
+  async function createPitchBufferHQ(t, ratio){
+    const base = await getDecodedBuffer(t);
+    const key = t.id + '|' + ratio.toFixed(8) + '|' + base.length + '|' + base.sampleRate;
+    if(processedPitchCacheKey === key && processedPitchBuffer) return processedPitchBuffer;
+    setStatus('Preparando TOM com qualidade maior...');
+    const ctx = await ensureAudioCtx();
+    const channels = [];
+    for(let c=0;c<Math.min(2,base.numberOfChannels);c++) channels.push(base.getChannelData(c));
+    if(channels.length===1) channels.push(channels[0]);
+    const shifted = channels.map(ch=>resampleChannelLinear(ch, ratio));
+    await new Promise(r=>setTimeout(r,0));
+    const stretched = await wsolaStretchChannels(shifted, base.length, p=>setStatus('Preparando TOM... '+Math.round(p*100)+'%'));
+    const out = makeAudioBufferFromChannels(ctx, stretched, base.sampleRate);
+    processedPitchCacheKey = key; processedPitchBuffer = out;
+    return out;
+  }
+
+  function createScriptProcessorShifter(context, ratio){
+    const bufferSize=2048, node=context.createScriptProcessor(bufferSize,2,2); node.pitchRatio=ratio;
+    const size=131072, delayBufferL=new Float32Array(size), delayBufferR=new Float32Array(size); let writePtr=0, phase=0; const windowSize=3072, hannTable=new Float32Array(windowSize);
+    for(let i=0;i<windowSize;i++) hannTable[i]=Math.sin((i/windowSize)*Math.PI);
+    node.onaudioprocess=(e)=>{
+      const inputL=e.inputBuffer.getChannelData(0), inputR=e.inputBuffer.numberOfChannels>1?e.inputBuffer.getChannelData(1):inputL;
+      const outputL=e.outputBuffer.getChannelData(0), outputR=e.outputBuffer.getChannelData(1); const r=node.pitchRatio;
+      if(Math.abs(r-1.0)<0.005){ outputL.set(inputL); outputR.set(inputR); return; }
+      const speed=1.0-r;
+      for(let i=0;i<bufferSize;i++){
+        delayBufferL[writePtr]=inputL[i]; delayBufferR[writePtr]=inputR[i]; let outL=0,outR=0;
+        for(let k=0;k<4;k++){
+          let delay=(phase+k*(windowSize/4))%windowSize; if(delay<0) delay+=windowSize;
+          let readPtr=(writePtr-delay)%size; if(readPtr<0) readPtr+=size;
+          const idx=Math.floor(delay)%windowSize, w=hannTable[idx]*hannTable[idx];
+          const a=Math.floor(readPtr), b=(a===size-1?0:a+1), frac=readPtr-a;
+          outL+=(delayBufferL[a]*(1-frac)+delayBufferL[b]*frac)*w; outR+=(delayBufferR[a]*(1-frac)+delayBufferR[b]*frac)*w;
+        }
+        outputL[i]=outL*0.72; outputR[i]=outR*0.72; writePtr=(writePtr+1)%size; phase=(phase+speed)%windowSize; if(phase<0) phase+=windowSize;
+      }
+    };
+    return node;
+  }
+  async function ensureAudioCtx(){
+    if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended') await audioCtx.resume();
+    if(!pitchWorkletReady && audioCtx.audioWorklet){
+      try{ const blob=new Blob([tuneWorkletCode],{type:'application/javascript'}); const url=URL.createObjectURL(blob); await audioCtx.audioWorklet.addModule(url); URL.revokeObjectURL(url); pitchWorkletReady=true; }catch(e){ console.warn('AudioWorklet indisponível, usando fallback Tune V08',e); }
+    }
+    return audioCtx;
+  }
+  async function getDecodedBuffer(t){
+    if(decodedTrackId===t.id && decodedBuffer) return decodedBuffer;
+    const ctx=await ensureAudioCtx();
+    const arr=await t.audio.arrayBuffer();
+    decodedBuffer=await ctx.decodeAudioData(arr.slice(0)); decodedTrackId=t.id; duration=decodedBuffer.duration||duration; return decodedBuffer;
+  }
+  function stopWebAudio(){
+    if(sourceNode){ try{sourceNode.onended=null; sourceNode.stop(0); sourceNode.disconnect();}catch(e){} sourceNode=null; }
+    if(pitchNode){ try{pitchNode.disconnect();}catch(e){} pitchNode=null; }
+    if(gainNode){ try{gainNode.disconnect();}catch(e){} gainNode=null; }
+  }
+  function setPitchTom(v){
+    pitchTom=Number(v); localStorage.setItem('tcb_pitch_tom',String(pitchTom)); invalidatePitchCache(); updatePitchUI();
+    if(pitchNode){ const ratio=currentPitchRatio(); if(pitchNode.parameters){ const p=pitchNode.parameters.get('pitchRatio'); if(p && audioCtx) p.setValueAtTime(ratio,audioCtx.currentTime); } else pitchNode.pitchRatio=ratio; }
+    if(isPlaying){ const was=progress; stopPlayer(false); progress=was; playCurrent(progress); }
+  }
+  function updatePitchUI(){
+    if(!el.pitchCurrent || !el.pitchGrid) return;
+    el.pitchCurrent.textContent=(pitchTom>0?'+':'')+String(pitchTom).replace('.',',')+' TOM';
+    [...el.pitchGrid.querySelectorAll('.pitch-btn')].forEach(btn=>btn.classList.toggle('active',Number(btn.dataset.tom)===pitchTom));
+  }
+  function initPitchUI(){
+    if(!el.pitchGrid) return;
+    el.pitchGrid.innerHTML='';
+    pitchStepsTom.forEach(v=>{ const b=document.createElement('button'); b.className='pitch-btn'; b.type='button'; b.dataset.tom=v; b.textContent=(v>0?'+':'')+String(v).replace('.',','); b.addEventListener('click',()=>setPitchTom(v)); el.pitchGrid.appendChild(b); });
+    if(el.pitchResetBtn) el.pitchResetBtn.addEventListener('click',()=>setPitchTom(0));
+    updatePitchUI();
+  }
+
+  function renderVU(){el.vu.innerHTML='';for(let i=0;i<14;i++){const b=document.createElement('div');b.className='vu w-2 bg-red-600 rounded-t';b.style.height=(35+Math.random()*65)+'%';b.style.animationDelay=(i*.05)+'s';el.vu.appendChild(b)}}
+  renderVU();
+
+  function render(){
+    tracks.sort((a,b)=>(a.position||0)-(b.position||0));
+    if(currentIndex>=tracks.length) currentIndex=Math.max(0,tracks.length-1);
+    el.count.textContent=tracks.length+' arquivo(s)';
+    el.trackList.innerHTML='';
+    if(!tracks.length){el.trackList.innerHTML='<div class="text-center text-zinc-600 font-black uppercase tracking-widest py-20">Nenhum áudio carregado</div>'}
+    tracks.forEach((t,i)=>{
+      const div=document.createElement('div');div.className='track '+(i===currentIndex?'active':'');div.draggable=true;div.dataset.id=t.id;
+      div.innerHTML=`<span class="font-mono opacity-50 text-xs">${String(i+1).padStart(2,'0')}</span><div class="min-w-0 flex-1"><div class="truncate font-black uppercase">${escapeHTML(t.name)}</div><div class="text-[10px] opacity-60 uppercase font-bold">${t.pdf?'PDF OK':(t.lyrics?'TXT OK':'sem letra')}</div></div><button class="del text-xs px-3 py-2 rounded-xl bg-black/40 border border-red-900 text-red-200 font-black">🗑 APAGAR</button>`;
+      div.addEventListener('click',e=>{if(e.target.closest('.del'))return;selectTrack(i,autoPlay)});
+      div.querySelector('.del').addEventListener('click',async e=>{e.stopPropagation();await removeTrack(t.id)});
+      div.addEventListener('dragstart',()=>{dragId=t.id;div.classList.add('dragging')});
+      div.addEventListener('dragend',()=>{dragId=null;div.classList.remove('dragging')});
+      div.addEventListener('dragover',e=>e.preventDefault());
+      div.addEventListener('drop',async e=>{e.preventDefault();await reorder(dragId,t.id)});
+      el.trackList.appendChild(div);
+    });
+    refreshCurrentUI();
+  }
+  function escapeHTML(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+  function renderLyrics(txt){
+    const t=current();
+    if(t && t.pdf){
+      if(window.currentPdfUrl) URL.revokeObjectURL(window.currentPdfUrl);
+      window.currentPdfUrl = URL.createObjectURL(t.pdf);
+      el.lyricsBox.innerHTML = `<iframe src="${window.currentPdfUrl}" style="width:100%;height:72vh;border:0;border-radius:14px;background:#111"></iframe>`;
+      return;
+    }
+    if(!txt){el.lyricsBox.textContent='Sem letra/cifra vinculada. Use UPLOAD .TXT ou UPLOAD PDF.';return}
+    el.lyricsBox.textContent = String(txt) + '\n\n\n\n\n\n\n\n\n\n\n\n';
+  }
+  function refreshCurrentUI(){
+    const t=current();
+    el.songTitle.textContent=t?t.name:'SEM ÁUDIO';
+    renderLyrics(t?t.lyrics:'');
+    el.seek.max=duration||100;el.seek.value=progress||0;el.time.textContent=fmt(progress)+' | '+fmt(duration);
+  }
+
+  async function load(){db=await openDB();tracks=await getAll();tracks.sort((a,b)=>(a.position||0)-(b.position||0));setStatus(tracks.length?'Arquivos recuperados do aparelho.':'Pronto para receber áudios.');render();}
+
+  async function addAudios(files){
+    const audios=[...files].filter(f=>f.type.startsWith('audio/') || /\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(f.name));
+    if(!audios.length){setStatus('Nenhum áudio válido encontrado.');return}
+    setStatus('Salvando áudio no aparelho...');
+    const start=tracks.length;
+    for(let i=0;i<audios.length;i++){
+      const f=audios[i];
+      const id='tcb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+      const track={id,name:f.name.replace(/\.[^/.]+$/,''),audio:f,lyrics:'',pdf:null,position:start+i,createdAt:Date.now()};
+      await putTrack(track);tracks.push(track);
+    }
+    setStatus('Áudio salvo. Ele continuará aqui quando fechar e abrir.');render();
+  }
+  async function uploadTxt(file){
+    const t=current(); if(!t){setStatus('Carregue um áudio antes de vincular TXT.');return}
+    const txt=await file.text();
+    t.lyrics=txt;t.pdf=null;t.updatedAt=Date.now();await putTrack(t);
+    setStatus('TXT salvo nesta música.');renderLyrics(txt);render();
+  }
+  async function uploadPdf(file){
+    const t=current(); if(!t){setStatus('Carregue um áudio antes de vincular PDF.');return}
+    if(!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf'){setStatus('Arquivo PDF inválido.'); return}
+    t.pdf=file;t.lyrics='';t.updatedAt=Date.now();await putTrack(t);
+    setStatus('PDF salvo nesta música.');renderLyrics('');render();
+  }
+
+  async function selectTrack(i,shouldAutoPlay=false){
+    if(!tracks.length || i < 0 || i >= tracks.length) return;
+    stopPlayer(false);
+    currentIndex=i;progress=0;duration=0;scrollBias=0;render();updateTime();
+    if(shouldAutoPlay === true) await playCurrent(0);
+    else { el.playBtn.textContent='▶'; el.engine.textContent='FAIXA PRONTA'; setStatus('Faixa selecionada. Auto Play desligado: aperte PLAY quando quiser.'); }
+  }
+
+  async function playCurrent(offset=progress){
+    const t=current(); if(!t){setStatus('Nenhum áudio carregado.');return}
+    try{
+      el.engine.textContent='CARREGANDO ÁUDIO...';
+      setStatus('Preparando áudio...');
+      stopPlayer(false);
+      // TOM 0: preserva 100% o player original da V26, que já carregou áudio corretamente.
+      if(Math.abs(pitchTom) < 0.001){
+        if(objectUrl){URL.revokeObjectURL(objectUrl); objectUrl=null}
+        objectUrl=URL.createObjectURL(t.audio);
+        player=new Audio(objectUrl);
+        player.volume=Number(el.volume.value || 0.8);
+        player.preload='auto';
+        player.addEventListener('loadedmetadata',()=>{
+          duration=player.duration||0;
+          progress=Math.min(offset||0, Math.max(0, duration-.05));
+          if(Number.isFinite(progress)) player.currentTime=progress;
+          updateTime();
+        }, {once:true});
+        player.addEventListener('timeupdate',()=>{
+          progress=player.currentTime||0;
+          duration=player.duration||duration||0;
+          updateTime();
+          applyAutoScroll();
+        });
+        player.addEventListener('ended',()=>next(), {once:true});
+        await player.play();
+        isPlaying=true; el.playBtn.textContent='Ⅱ'; el.vu.classList.remove('hidden');el.vu.classList.add('flex');el.engine.textContent='ENGINE ATIVO';
+        timer=setInterval(()=>{
+          if(!player) return;
+          progress=player.currentTime||0;
+          duration=player.duration||duration||0;
+          updateTime();
+          applyAutoScroll();
+        },250);
+        updateTime();setStatus('Tocando áudio original.');
+        return;
+      }
+
+      // TOM diferente de 0: usa EXATAMENTE o mesmo motor em tempo real do Trucker Cap Tune V8.
+      // Cadeia idêntica ao Tune: AudioBufferSource -> PitchShifterProcessor -> Analyser -> Gain -> saída.
+      const ctx=await ensureAudioCtx();
+      const ratio=currentPitchRatio();
+      const buf=await getDecodedBuffer(t);
+      sourceNode=ctx.createBufferSource(); sourceNode.buffer=buf;
+      sourceNode.loop=false;
+      pitchNode=pitchWorkletReady ? new AudioWorkletNode(ctx,'pitch-shifter-processor') : createScriptProcessorShifter(ctx, ratio);
+      if(pitchNode.parameters){
+        const p=pitchNode.parameters.get('pitchRatio');
+        if(p) p.setValueAtTime(ratio,ctx.currentTime);
+      } else {
+        pitchNode.pitchRatio=ratio;
+      }
+      gainNode=ctx.createGain();
+      const v=Number(el.volume.value||0.8);
+      const absTom=Math.abs(Number(pitchTom)||0);
+      const pitchMakeup = absTom>=2.5 ? 1.18 : absTom>=1.5 ? 1.12 : 1.06;
+      gainNode.gain.value=Math.max(0,Math.min(1.35,v*pitchMakeup));
+      sourceNode.connect(pitchNode); pitchNode.connect(gainNode); gainNode.connect(ctx.destination);
+      const startOffset=Math.min(offset||0, Math.max(0, buf.duration-.05));
+      webAudioOffset=startOffset; webAudioStartedAt=ctx.currentTime;
+      sourceNode.onended=()=>{ if(isPlaying) next(); };
+      sourceNode.start(0,startOffset);
+      duration=buf.duration||0; progress=startOffset; isPlaying=true; el.playBtn.textContent='Ⅱ'; el.vu.classList.remove('hidden');el.vu.classList.add('flex');el.engine.textContent='TUNE V8 PITCH ATIVO';
+      timer=setInterval(()=>{
+        if(!audioCtx || !sourceNode) return;
+        progress=Math.min(duration||0, webAudioOffset + (audioCtx.currentTime-webAudioStartedAt));
+        updateTime(); applyAutoScroll();
+      },120);
+      updateTime(); setStatus('Tocando com o mesmo motor em tempo real do Tune V8.');
+    }catch(err){console.error(err);setStatus('Erro ao tocar. Tente recarregar o áudio.');el.engine.textContent='ERRO NO ÁUDIO';stopPlayer(false)}
+  }
+  function stopPlayer(resetPlay=true){
+    if(timer){clearInterval(timer);timer=null}
+    stopWebAudio();
+    if(player){try{player.pause();player.src='';player.load()}catch(e){} player=null}
+    if(objectUrl){URL.revokeObjectURL(objectUrl); objectUrl=null}
+    isPlaying=false;if(resetPlay) el.playBtn.textContent='▶';el.vu.classList.add('hidden');el.vu.classList.remove('flex')
+  }
+  function toggle(){if(!current())return;if(isPlaying){stopPlayer();updateTime();setStatus('Pausado.')}else playCurrent(progress)}
+  function updateTime(){el.seek.max=duration||100;el.seek.value=Math.min(progress,duration||100);el.time.textContent=fmt(progress)+' | '+fmt(duration)}
+  async function next(){
+    if(!tracks.length)return;
+    stopPlayer(false);
+    currentIndex=(currentIndex+1)%tracks.length;progress=0;duration=0;scrollBias=0;render();updateTime();
+    if(autoPlay === true) await playCurrent(0);
+    else {el.playBtn.textContent='▶';el.engine.textContent='FAIXA PRONTA';setStatus('Próxima faixa selecionada. Auto Play desligado: aperte PLAY quando quiser.')}
+  }
+  async function prev(){
+    if(!tracks.length)return;
+    stopPlayer(false);
+    currentIndex=(currentIndex-1+tracks.length)%tracks.length;progress=0;duration=0;scrollBias=0;render();updateTime();
+    if(autoPlay === true) await playCurrent(0);
+    else {el.playBtn.textContent='▶';el.engine.textContent='FAIXA PRONTA';setStatus('Faixa anterior selecionada. Auto Play desligado: aperte PLAY quando quiser.')}
+  }
+  async function removeTrack(id){const idx=tracks.findIndex(t=>t.id===id); if(idx<0)return; if(current()?.id===id) stopPlayer(); await deleteTrack(id); tracks=tracks.filter(t=>t.id!==id); tracks.forEach((t,i)=>t.position=i); for(const t of tracks) await putTrack(t); if(currentIndex>=tracks.length)currentIndex=Math.max(0,tracks.length-1); render(); setStatus('Arquivo removido.')}
+  async function reorder(fromId,toId){if(!fromId||fromId===toId)return;const from=tracks.findIndex(t=>t.id===fromId),to=tracks.findIndex(t=>t.id===toId);if(from<0||to<0)return;const [item]=tracks.splice(from,1);tracks.splice(to,0,item);tracks.forEach((t,i)=>t.position=i);for(const t of tracks)await putTrack(t);currentIndex=tracks.findIndex(t=>t.id===current()?.id);render();setStatus('Setlist reorganizada e salva.')}
+
+  el.audioInput.addEventListener('change',e=>addAudios(e.target.files));
+  if(el.audioInputSetlist) el.audioInputSetlist.addEventListener('change',e=>addAudios(e.target.files));
+  el.txtInput.addEventListener('change',e=>{if(e.target.files[0])uploadTxt(e.target.files[0]);e.target.value=''});
+  if(el.pdfInput) el.pdfInput.addEventListener('change',e=>{if(e.target.files[0])uploadPdf(e.target.files[0]);e.target.value=''});
+  el.playBtn.addEventListener('click',toggle);el.nextBtn.addEventListener('click',next);el.prevBtn.addEventListener('click',prev);
+  el.volume.addEventListener('input',e=>{const v=Number(e.target.value);el.volumeValue.textContent=Math.round(v*100)+'%'; if(player) player.volume=Math.max(0,Math.min(1,v)); if(gainNode) gainNode.gain.value=Math.max(0,Math.min(1.5,v));});
+  el.seek.addEventListener('input',e=>{progress=Number(e.target.value);updateTime()});el.seek.addEventListener('change',e=>{progress=Number(e.target.value);if(player){player.currentTime=progress; if(!isPlaying) updateTime();}else updateTime();});
+  el.scrollUpBtn.addEventListener('click',()=>{scrollBias -= 80; applyAutoScroll(); setStatus('Letra atrasada um pouco. Auto scroll continua ligado.');});
+  el.scrollDownBtn.addEventListener('click',()=>{scrollBias += 80; applyAutoScroll(); setStatus('Letra adiantada um pouco. Auto scroll continua ligado.');});
+  el.scrollTopBtn.addEventListener('click',()=>{scrollBias=0; scrollSpeed=1; localStorage.setItem('tcb_scroll_speed','1'); updateScrollSpeedUI(); applyAutoScroll(); setStatus('Sincronia do scroll zerada.');});
+  el.scrollSpeed.addEventListener('input',e=>{scrollSpeed=Number(e.target.value); localStorage.setItem('tcb_scroll_speed', String(scrollSpeed)); updateScrollSpeedUI(); applyAutoScroll(); setStatus('Velocidade do scroll ajustada.');});
+  if(el.fontSizeControl) el.fontSizeControl.addEventListener('input',e=>{fontSize=Number(e.target.value); localStorage.setItem('tcb_font_size', String(fontSize)); updateFontSizeUI(); setStatus('Tamanho da fonte da letra/cifra ajustado.');});
+  el.lyricsBox.addEventListener('scroll',()=>{
+    if(!autoScroll || !duration || programmaticScroll) return;
+    scrollBias = el.lyricsBox.scrollTop - baseScrollTop();
+  }, {passive:true});
+  el.autoScrollBtn.addEventListener('click',()=>{autoScroll=!autoScroll;updateAutoScrollUI();setStatus(autoScroll?'Auto scroll híbrido ativado. Você ainda pode corrigir fino.':'Auto scroll desligado. Controle totalmente manual.');});
+  el.autoPlayBtn.addEventListener('click',()=>{autoPlay=!autoPlay;localStorage.setItem('tcb_auto_play', String(autoPlay));updateAutoPlayUI();setStatus(autoPlay?'Auto Play do áudio LIGADO: clicar, NEXT e PREV já tocam.':'Auto Play do áudio DESLIGADO: clicar, NEXT e PREV só selecionam.');});
+  el.clearBtn.addEventListener('click',async()=>{if(confirm('Apagar todos os áudios e letras salvos neste aparelho?')){stopPlayer();await clearAll();tracks=[];currentIndex=0;progress=0;duration=0;render();setStatus('Tudo limpo.')}});
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;el.installBtn.classList.remove('hidden')});el.installBtn.addEventListener('click',async()=>{if(deferredInstall){deferredInstall.prompt();deferredInstall=null;el.installBtn.classList.add('hidden')}});
+  if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js').then(()=>console.log('TRUCKER CAP: offline/PWA ativo')).catch(e=>console.warn('SW falhou',e));})}
+
+  const tabPalco=$('tabPalco'), tabSetlist=$('tabSetlist'), tabTom=$('tabTom'), tabPalcoBtn=$('tabPalcoBtn'), tabSetlistBtn=$('tabSetlistBtn'), tabTomBtn=$('tabTomBtn');
+  function showTab(tab){
+    const palco = tab === 'palco', setlist = tab === 'setlist', tom = tab === 'tom';
+    tabPalco.classList.toggle('active', palco);
+    tabSetlist.classList.toggle('active', setlist);
+    if(tabTom) tabTom.classList.toggle('active', tom);
+    tabPalcoBtn.classList.toggle('active', palco);
+    tabSetlistBtn.classList.toggle('active', setlist);
+    if(tabTomBtn) tabTomBtn.classList.toggle('active', tom);
+    localStorage.setItem('tcb_active_tab', tab);
+    if(tab === 'palco') setStatus('Modo Palco: controles principais e letra/cifra.');
+    else if(tab === 'setlist') setStatus('Modo Setlist: organize áudios, letras e ordem do show.');
+    else setStatus('TOM: Trucker Cap Tune V08 interno.');
+  }
+  tabPalcoBtn.addEventListener('click',()=>showTab('palco'));
+  tabSetlistBtn.addEventListener('click',()=>showTab('setlist'));
+  if(tabTomBtn) tabTomBtn.addEventListener('click',()=>showTab('tom'));
+  showTab(localStorage.getItem('tcb_active_tab') || 'palco');
+
+  updateAutoPlayUI(); updateAutoScrollUI(); updateScrollSpeedUI(); updateFontSizeUI();
+  initPitchUI();
+  load();
+})();
+</script>
+
+  <footer style="margin:40px auto 24px;max-width:1600px;padding:22px;text-align:center;font-size:12px;color:#777;border-top:1px solid #27272a;line-height:1.55;">
+    <p style="font-weight:900;color:#fff;margin:0 0 8px;">© 2026 SAMUEL DE AZEVEDO CURSOS MUSICAIS LTDA.</p>
+    <p style="margin:0 0 8px;">Este aplicativo, incluindo seu código-fonte, design e funcionalidades, é protegido pela Lei nº 9.610/98 (Lei de Direitos Autorais) e demais legislações aplicáveis.</p>
+    <p style="margin:0 0 8px;">A reprodução, distribuição ou utilização não autorizada deste software constitui violação de direitos autorais, sujeitando o infrator às penalidades previstas no artigo 184 do Código Penal Brasileiro.</p>
+    <p style="margin:0;">Todos os direitos reservados.</p>
+  </footer>
+
+</body>
+</html>
